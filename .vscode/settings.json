@@ -1,0 +1,36 @@
+{
+    "files.exclude": {
+        "**/__pycache__": true,
+        ".ruff_cache": true,
+        ".mypy_cache": true,
+        "**/*.egg-info": true,
+        ".pytest_cache": true,
+        ".coverage": true
+    },
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit",
+            "source.fixAll": "explicit"
+        }
+    },
+    "ruff.lineLength": 100,
+    "ruff.lint.enable": true,
+    "ruff.lint.select": [
+        "ANN",
+        "B",
+        "C4",
+        "E",
+        "F",
+        "I",
+        "SIM",
+        "TID",
+        "UP",
+        "W"
+    ],
+    "mypy-type-checker.args": [
+        "--enable-incomplete-feature=NewGenericSyntax"
+    ],
+    "python.testing.pytestEnabled": false
+}
