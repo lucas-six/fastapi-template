@@ -10,9 +10,16 @@ FastAPI template. Using FastAPI, SQLModel, PostgreSQL, Docker, GitHub Actions, a
 # .env
 
 APP_NAME="FastAPI App"
-APP_VERSION="v1.0.0"
+APP_VERSION="v1"
+APP_ROOT_URL="/api"
 APP_DESCRIPTION="FastAPI app description."
 DEBUG=true
+
+SQL_DB_ENABLED=true
+SQL_DB_URL="postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
+SQL_DB_CONNECT_TIMEOUT=5.0
+SQL_DB_POOL_SIZE=10
+SQL_DB_POOL_TIMEOUT=5.0
 ```
 
 ### Run
@@ -46,6 +53,9 @@ uv run uvicorn --host 0.0.0.0 --port 8000 \
 - [**`FastAPI`**](https://fastapi.tiangolo.com/)
 - [*`Pydantic`*: Data Validation and Settings Management (Python Cookbook)](https://lucas-six.github.io/python-cookbook/cookbook/data/pydantic)
 - [**`uvicorn`**: *ASGI* Server (Python Cookbook)](https://lucas-six.github.io/python-cookbook/cookbook/web/uvicorn)
+- [**`SQLModel`**: SQL Databases ORM](https://sqlmodel.tiangolo.com/)
+- [*`SQLAlchemy`*: SQL Databases ORM](https://www.sqlalchemy.org/)
+- [**`Alembic`**: Database Migrations](https://alembic.sqlalchemy.org/)
 - [*`Swagger`*: *OpenAPI*](https://swagger.io/)
 - [*`Starlette`*: *ASGI* Web part](https://www.starlette.io/)
 - [Awesome List for FastAPI](https://github.com/mjhea0/awesome-fastapi)
