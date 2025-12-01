@@ -31,6 +31,7 @@ repos:
     rev: v1.18.2
     hooks:
       - id: mypy
+        exclude: alembic/env.py,alembic/versions/*
         additional_dependencies: [pydantic, types-redis, aiomqtt]
 
 default_language_version:
