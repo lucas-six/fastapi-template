@@ -1,6 +1,16 @@
 # fastapi-template
 
-FastAPI template. Using FastAPI, SQLModel, PostgreSQL, Docker, GitHub Actions, automatic HTTPS and more.
+FastAPI template.
+Using FastAPI, SQLModel, PostgreSQL, Redis, RabbitMQ, Docker, GitHub Actions, automatic HTTPS and more.
+
+## Features
+
+- SQLModel support: PostgreSQL
+- Caching support: Redis
+- Message Queue support: RabbitMQ
+- Docker support
+- GitHub Actions support
+- Automatic HTTPS support
 
 ## Usage
 
@@ -20,6 +30,12 @@ SQL_DB_URL="postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
 SQL_DB_CONNECT_TIMEOUT=5.0
 SQL_DB_POOL_SIZE=10
 SQL_DB_POOL_TIMEOUT=5.0
+
+REDIS_URL="redis://:foobared@localhost:6379/0"
+CACHE_PREFIX=""
+CACHE_MAX_CONNS=4096
+CACHE_CONN_TIMEOUT=3.0
+CACHE_TIMEOUT=3.5
 ```
 
 ### Run
@@ -54,6 +70,7 @@ uv run uvicorn --host 0.0.0.0 --port 8000 \
 - [*`Pydantic`*: Data Validation and Settings Management (Python Cookbook)](https://lucas-six.github.io/python-cookbook/cookbook/data/pydantic)
 - [**`uvicorn`**: *ASGI* Server (Python Cookbook)](https://lucas-six.github.io/python-cookbook/cookbook/web/uvicorn)
 - [SQL Database (PostgreSQL): `SQLModel` + `Alembic` (Python Cookbook)](https://lucas-six.github.io/python-cookbook/cookbook/system_services/sql_db)
+- [Cache (Redis): **`redis-py`** (Python Cookbook)](https://lucas-six.github.io/python-cookbook/cookbook/system_services/redis)
 - [*`Swagger`*: *OpenAPI*](https://swagger.io/)
 - [*`Starlette`*: *ASGI* Web part](https://www.starlette.io/)
 - [Awesome List for FastAPI](https://github.com/mjhea0/awesome-fastapi)

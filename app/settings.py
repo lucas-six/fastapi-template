@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import PostgresDsn, RedisDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,12 +20,19 @@ class Settings(BaseSettings):
 
     # Database (PostgreSQL)
     sql_db_enabled: bool = False
-    sql_db_url: SecretStr = SecretStr(
+    sql_db_url: PostgresDsn = PostgresDsn(
         'postgresql+psycopg://postgres:postgres@localhost:5432/postgres'
     )
     sql_db_connect_timeout: float = 5.0
     sql_db_pool_size: int = 10
     sql_db_pool_timeout: float = 5.0
+
+    # Cache (Redis)
+    redis_url: RedisDsn = RedisDsn('redis://:foobared@localhost:6379/0')
+    cache_max_conns: int = 4096
+    cache_conn_timeout: float | None = 3.0
+    cache_timeout: float | None = 3.5
+    cache_prefix: str = ''
 
 
 @lru_cache
