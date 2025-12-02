@@ -32,7 +32,7 @@ repos:
     hooks:
       - id: mypy
         exclude: alembic/
-        additional_dependencies: [pydantic, types-redis, aiomqtt]
+        additional_dependencies: [pydantic, sqlmodel, types-redis, aiomqtt]
 
 default_language_version:
   python: 'python3.13'
