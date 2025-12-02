@@ -127,7 +127,7 @@ max-complexity = 12
 [tool.mypy]
 python_version = "3.13"
 plugins = ["pydantic.mypy"]
-exclude = ["alembic/env.py", "alembic/versions/*"]
+exclude = ["alembic/"]
 follow_imports = "silent"
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -136,6 +136,7 @@ disallow_any_generics = false
 check_untyped_defs = true
 no_implicit_reexport = true
 disallow_untyped_defs = true
+strict_optional = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
@@ -144,7 +145,7 @@ warn_required_dynamic_aliases = true
 warn_untyped_fields = true
 
 [tool.pyright]
-include = ["app"]
+include = ["app/**/*.py"]
 exclude = [
     ".git",
     "**/__pycache__",
