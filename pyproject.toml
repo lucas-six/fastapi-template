@@ -9,7 +9,9 @@ dependencies = [
     "alembic>=1.17.2",
     "fastapi[all]",
     "psycopg[binary]>=3.2.13",
+    "redis[hiredis]>=7.1.0",
     "sqlmodel>=0.0.27",
+    "types-redis>=4.6.0.20241004",
     "uvicorn[standard]",
 ]
 license-files = ["LICEN[CS]E*", "vendored/licenses/*.txt", "AUTHORS.md"]
@@ -143,6 +145,10 @@ init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
 warn_untyped_fields = true
+
+[[tool.mypy.overrides]]
+module = "redis.*"
+ignore_missing_imports = true
 
 [tool.pyright]
 include = ["app/**/*.py"]
