@@ -85,6 +85,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[dict[str, Any]]:
 app: FastAPI = FastAPI(
     title=settings.app_name,
     docs_url=f'{settings.app_root_url}/docs',
+    redoc_url=f'{settings.app_root_url}/redoc',
     debug=settings.debug,
     openapi_url=f'{settings.app_root_url}/docs/openapi.json',
     description=settings.app_description,
