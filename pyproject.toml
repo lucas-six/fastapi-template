@@ -126,6 +126,14 @@ indent-style = "space"
 [tool.ruff.lint.mccabe]
 max-complexity = 12
 
+[tool.ruff.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.params.Query",
+]
+
 [tool.mypy]
 python_version = "3.13"
 plugins = ["pydantic.mypy"]

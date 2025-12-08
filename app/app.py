@@ -8,7 +8,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import col, func, select
@@ -94,16 +94,24 @@ app: FastAPI = FastAPI(
 )
 
 
+async def get_sql_db_session(request: Request) -> AsyncGenerator[AsyncSession, Any]:
+    sql_db_client: AsyncEngine | None = request.state.sql_db_client
+    if sql_db_client:
+        async with AsyncSession(sql_db_client) as session:
+            yield session
+    else:
+        raise HTTPException(status_code=500, detail='SQL Database connection not found')
+
+
 @app.get(f'{settings.app_root_url}')
-async def root(request: Request) -> dict[str, str | bool | None]:
+async def root(
+    request: Request, sql_db_session: AsyncSession = Depends(get_sql_db_session)
+) -> dict[str, str | bool | None]:
     logger.debug(f'Root endpoint [{await pid_str()}]...')
 
     # SQL Database
-    sql_db_client = request.state.sql_db_client
-    if settings.sql_db_enabled and sql_db_client:
-        async with AsyncSession(sql_db_client) as session:
-            message = await session.exec(select(func.count(col(TemplateDemo.id))))
-        logger.debug(f'SQL Database message: {message.first()}')
+    message = await sql_db_session.exec(select(func.count(col(TemplateDemo.id))))
+    logger.debug(f'SQL Database message: {message.first()}')
 
     # Cache (Redis)
     cache_val = await request.state.redis_client.get(f'{settings.cache_prefix}')
