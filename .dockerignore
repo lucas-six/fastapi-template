@@ -1,4 +1,6 @@
 .env
+alembic.ini
+
 .vscode
 .github
 .ruff_cache
