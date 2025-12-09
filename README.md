@@ -80,7 +80,7 @@ uv run uvicorn --host 0.0.0.0 --port 8000 \
     --log-config app/uvicorn_logging.json
 ```
 
-```basg
+```bash
 docker run -d --network=host --env-file .env fastapi-template:<tag>
 
 docker logs -f <container_id>
