@@ -81,7 +81,12 @@ uv run uvicorn --host 0.0.0.0 --port 8000 \
 ```
 
 ```basg
-dockerun -d --network=host --env-file .env fastapi-template:lastest
+docker run -d --network=host --env-file .env fastapi-template:<tag>
+
+docker logs -f <container_id>
+docker stop <container_id>
+docker rm <container_id>
+docker ps -a
 ```
 
 ## References
