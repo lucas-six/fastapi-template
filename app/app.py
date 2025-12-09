@@ -123,4 +123,4 @@ async def root(
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run(app='app.app:app', host='', reload=True)
+    uvicorn.run(app='app.app:app', reload=True)

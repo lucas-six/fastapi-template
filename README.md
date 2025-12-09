@@ -5,12 +5,22 @@ Using FastAPI, SQLModel, PostgreSQL, Redis, RabbitMQ, Docker, GitHub Actions, au
 
 ## Features
 
-- SQLModel support: PostgreSQL
-- Caching support: Redis
-- Message Queue support: RabbitMQ
-- Docker support
-- GitHub Actions support
-- Automatic HTTPS support
+- Virtual Environment support: `uv`
+- SQL Database support: `PostgreSQL`
+- Caching support: `Redis`
+- Message Queue support: `RabbitMQ`
+- Containerization support: `Docker`
+- GitHub Actions support: `GitHub Actions`
+- Automatic HTTPS support: `Automatic HTTPS`
+
+## System Requirements
+
+- Python 3.13
+- PostgreSQL 16
+- Redis 8.4
+- Docker Engine 29.1
+- GitHub Actions
+- Automatic HTTPS
 
 ## Usage
 
@@ -19,20 +29,22 @@ Using FastAPI, SQLModel, PostgreSQL, Redis, RabbitMQ, Docker, GitHub Actions, au
 ```ini
 # .env
 
-APP_NAME="FastAPI App"
-APP_VERSION="v1"
-APP_ROOT_URL="/api"
-APP_DESCRIPTION="FastAPI app description."
+APP_NAME=FastAPI App
+APP_VERSION=v1
+APP_ROOT_URL=/api
+APP_DESCRIPTION=FastAPI App description.
 DEBUG=true
 
+# SQL Database (PostgreSQL)
 SQL_DB_ENABLED=true
-SQL_DB_URL="postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
+SQL_DB_URL=postgresql+psycopg://postgres:postgres@localhost:5432/postgres
 SQL_DB_CONNECT_TIMEOUT=5.0
 SQL_DB_POOL_SIZE=10
 SQL_DB_POOL_TIMEOUT=5.0
 
-REDIS_URL="redis://:foobared@localhost:6379/0"
-CACHE_PREFIX=""
+# Cache (Redis)
+REDIS_URL=redis://:foobared@localhost:6379/0
+CACHE_PREFIX=
 CACHE_MAX_CONNS=4096
 CACHE_CONN_TIMEOUT=3.0
 CACHE_TIMEOUT=3.5
@@ -44,6 +56,10 @@ CACHE_TIMEOUT=3.5
 
 ```bash
 uv run -m app.app
+```
+
+```bash
+docker build -t fastapi-template:<tag> .  # <tag> is the tag of the image
 ```
 
 #### Production
@@ -62,6 +78,10 @@ uv run uvicorn --host 0.0.0.0 --port 8000 \
     --no-server-header \
     app.app:app \
     --log-config app/uvicorn_logging.json
+```
+
+```basg
+dockerun -d --network=host --env-file .env fastapi-template:lastest
 ```
 
 ## References
