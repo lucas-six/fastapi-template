@@ -8,6 +8,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
 
+from celery.result import AsyncResult
 from fastapi import Depends, FastAPI, HTTPException, Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -118,10 +119,19 @@ async def root(
     cache_val = await request.state.redis_client.get(f'{settings.cache_prefix}')
 
     # Task (Celery: RabbitMQ/Redis)
-    do_something.delay()
-    logger.debug('do_something task delayed')
+    task = do_something.delay()
+    logger.debug(f'do_something task {task.id} delayed')
 
     return {'Hello': 'World', 'debug': settings.debug, 'cache_val': cache_val}
+
+
+@app.get(f'{settings.app_root_url}/status/{{task_id}}')
+async def status(task_id: str, request: Request) -> dict[str, str | bool | None]:
+    task = AsyncResult(task_id)
+    if task.ready():
+        return {'status': 'DONE', 'result': task.get()}
+    else:
+        return {'status': 'IN_PROGRESS'}
 
 
 # Only for develop environment
