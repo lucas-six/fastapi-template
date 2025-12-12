@@ -178,6 +178,7 @@ exclude = [
 ]
 reportGeneralTypeIssues = "none"
 reportUnboundVariable = "none"
+reportFunctionMemberAccess = "none"
 stubPath = ""
 pythonVersion = "3.13"
 
