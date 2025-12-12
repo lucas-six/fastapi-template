@@ -7,3 +7,5 @@ alembic.ini
 .mypy_cache
 .pytest_cache
 .coverage
+
+celerybeat-schedule

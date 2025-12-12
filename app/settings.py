@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import PostgresDsn, RedisDsn
+from pydantic import AmqpDsn, PostgresDsn, RedisDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +33,16 @@ class Settings(BaseSettings):
     cache_conn_timeout: float | None = 3.0
     cache_timeout: float | None = 3.5
     cache_prefix: str = ''
+
+    # Task (Celery)
+    task_queue_broker: RedisDsn | AmqpDsn = AmqpDsn('amqp://guest:guest@localhost:5672')
+    task_queue_backend: RedisDsn | None = None
+    task_time_limit: int | None = None  # 任务执行时间限制（秒）
+    task_timezone: str = 'UTC'
+    task_queue_broker_connection_timeout: float = 3.0
+    task_queue_broker_connection_max_retries: int = 3
+    task_queue_result_expires: int = 60 * 60 * 24
+    # task_queue_default_retry_delay: int = 60
 
 
 @lru_cache

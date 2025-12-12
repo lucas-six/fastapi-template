@@ -17,6 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.db_models import TemplateDemo
 from app.settings import get_settings
 from app.utils import pid_str
+from task.celery_worker import do_something  # pyright: ignore[reportMissingImports]
 
 settings = get_settings()
 
@@ -115,6 +116,10 @@ async def root(
 
     # Cache (Redis)
     cache_val = await request.state.redis_client.get(f'{settings.cache_prefix}')
+
+    # Task (Celery: RabbitMQ/Redis)
+    do_something.delay()
+    logger.debug('do_something task delayed')
 
     return {'Hello': 'World', 'debug': settings.debug, 'cache_val': cache_val}
 

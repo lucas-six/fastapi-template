@@ -1,0 +1,22 @@
+services:
+
+  api:
+    image: fastapi-template:0.0.3
+    depends_on:
+      - worker
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    env_file:
+      - .env
+    command: celery -A task.celery_worker worker --loglevel=info --concurrency=1
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    env_file:
+      - .env
+    command: celery -A task.celery_worker beat --loglevel=info
