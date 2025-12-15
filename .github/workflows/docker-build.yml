@@ -16,46 +16,39 @@ env:
 
 
 jobs:
-  build:
+  build-push:
     runs-on: ubuntu-latest
-    outputs:
-      should_push: ${{ steps.check.outputs.should_push }}
+    strategy:
+      matrix:
+        include:
+          - event: pull_request
+            push: false
+            tags: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
+          - event: push
+            ref: refs/heads/main
+            push: true
+            tags: latest
+          - event: tag
+            ref: refs/tags/v*
+            push: true
+            tags: ${{ github.ref_name }},latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Check push conditions
-        id: check
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "should_push=false" >> $GITHUB_OUTPUT
-          else
-            echo "should_push=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
         with:
-          context: .
-          push: false
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          fetch-depth: 0
 
-
-  push:
-    needs: build
-    if: needs.build.outputs.should_push == 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
+      - name: Set up Docker Buildx with container driver
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: |
+            image=moby/buildkit:master
+            network=host
 
       - name: Login to Docker Hub
+        if: matrix.push
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -63,39 +56,17 @@ jobs:
           password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
 
       # - name: Login to GHCR
+      #   if: matrix.push
       #   uses: docker/login-action@v3
       #   with:
       #     registry: ${{ env.REGISTRY }}
       #     username: ${{ github.actor }}
       #     password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate tags
-        id: tags
-        run: |
-          # 基础标签（SHA）
-          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-
-          # 如果是 main 分支推送，添加 latest
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-          fi
-
-          # 如果是版本标签，添加语义化标签
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
-            VERSION=${TAG_NAME#v}
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}"
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${MAJOR}.${MINOR}"
-            TAGS="${TAGS},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${MAJOR}"
-          fi
-
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
-
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          push: ${{ matrix.push }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tags }}
