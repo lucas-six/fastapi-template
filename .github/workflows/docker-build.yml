@@ -6,8 +6,6 @@ on:
     tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ main ]
-  # 可以手动触发
-  workflow_dispatch:
 
 
 env:
@@ -18,20 +16,6 @@ env:
 jobs:
   build-push:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - event: pull_request
-            push: false
-#            tags: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
-          - event: push
-            ref: refs/heads/main
-            push: true
-#           tags: latest
-          - event: tag
-            ref: refs/tags/v*
-            push: true
-#           tags: ${{ github.ref_name }},latest
 
     steps:
       - name: Checkout
@@ -45,7 +29,7 @@ jobs:
           driver: docker-container
           driver-opts: |
             image=moby/buildkit:master
-            network=host
+         # network=host
 
       - name: Generate Docker metadata
         id: meta
@@ -67,26 +51,18 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Login to Docker Hub
-        if: matrix.push
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
 
-      # - name: Login to GHCR
-      #   if: matrix.push
-      #   uses: docker/login-action@v3
-      #   with:
-      #     registry: ${{ env.REGISTRY }}
-      #     username: ${{ github.actor }}
-      #     password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ matrix.push }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
