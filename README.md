@@ -73,7 +73,7 @@ UVICORN_TIMEOUT_KEEP_ALIVE=5
 
 ### Run
 
-#### Development
+#### Development / Testing
 
 ```bash
 uv run -m app.app
