@@ -1,4 +1,4 @@
-name: Docker Build and Push with Metadata Action
+name: Docker Build and Push
 
 on:
   push:
