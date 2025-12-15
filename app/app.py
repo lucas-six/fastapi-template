@@ -9,13 +9,14 @@ from contextlib import asynccontextmanager
 from typing import Any, TypedDict
 
 from celery.result import AsyncResult
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db_models import TemplateDemo
+from app.dependencies import get_sql_db_session
 from app.settings import get_settings
 from app.utils import pid_str
 from task.celery_worker import do_something  # pyright: ignore[reportMissingImports]
@@ -94,15 +95,6 @@ app: FastAPI = FastAPI(
     version=settings.app_version,
     lifespan=lifespan,
 )
-
-
-async def get_sql_db_session(request: Request) -> AsyncGenerator[AsyncSession, Any]:
-    sql_db_client: AsyncEngine | None = request.state.sql_db_client
-    if sql_db_client:
-        async with AsyncSession(sql_db_client) as session:
-            yield session
-    else:
-        raise HTTPException(status_code=500, detail='SQL Database connection not found')
 
 
 @app.get(f'{settings.app_root_url}')
