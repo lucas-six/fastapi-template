@@ -12,7 +12,7 @@ GitHub Actions, automatic HTTPS and more.
 - Task Queue support: `Celery`
 - Message Queue support: `RabbitMQ`
 - Containerization support: `Docker`
-- GitHub Actions support: `GitHub Actions`
+- Workflow support: `GitHub Actions`
 - Automatic HTTPS support: `Automatic HTTPS`
 
 ## System Requirements
@@ -22,7 +22,6 @@ GitHub Actions, automatic HTTPS and more.
 - Redis 8.4+
 - RabbitMQ 4.2+
 - Docker Engine 29.1+
-- GitHub Actions
 - Automatic HTTPS
 
 ## Usage
