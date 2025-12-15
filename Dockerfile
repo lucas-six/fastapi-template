@@ -35,20 +35,27 @@ COPY --from=builder /app /app
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+ENV UVICORN_PORT=8000
+ENV UVICORN_WORKERS=1
+ENV UVICORN_CONCURRENCY=1024
+ENV UVICORN_MAX_REQUESTS=10000
+ENV UVICORN_BACKLOG=4096
+ENV UVICORN_LOG_LEVEL=info
+ENV UVICORN_TIMEOUT_KEEP_ALIVE=5
 WORKDIR /app
 
 # Run the application.
-CMD ["uvicorn", "app.app:app", \
-    "--host", "0.0.0.0", \
-    "--port", "8000", \
-    "--proxy-headers", \
-    "--forwarded-allow-ips", "*", \
-    "--workers", "1", \
-    "--limit-concurrency", "1024", \
-    "--limit-max-requests", "10000", \
-    "--backlog", "4096", \
-    "--log-level", "info", \
-    "--timeout-keep-alive", "5", \
-    "--no-use-colors", \
-    "--no-server-header", \
-    "--log-config", "app/uvicorn_logging.json"]
+CMD ["sh", "-c", "uvicorn app.app:app \
+    --host 0.0.0.0 \
+    --port ${UVICORN_PORT} \
+    --proxy-headers \
+    --forwarded-allow-ips \"*\" \
+    --workers ${UVICORN_WORKERS} \
+    --limit-concurrency ${UVICORN_CONCURRENCY} \
+    --limit-max-requests ${UVICORN_MAX_REQUESTS} \
+    --backlog ${UVICORN_BACKLOG} \
+    --log-level ${UVICORN_LOG_LEVEL} \
+    --timeout-keep-alive ${UVICORN_TIMEOUT_KEEP_ALIVE} \
+    --no-use-colors \
+    --no-server-header \
+    --log-config app/uvicorn_logging.json"]
