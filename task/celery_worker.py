@@ -1,6 +1,7 @@
 """Celery Worker."""
 
 import logging
+from typing import Any
 
 from celery import Celery
 
@@ -31,3 +32,19 @@ def heartbeat() -> None:
 @celery_app.task
 def do_something() -> None:
     logger.debug('do_something')
+
+
+@celery_app.task
+def process_email_received(email_data: dict[str, Any]) -> None:
+    email_id = email_data['data']['email_id']
+    logger.debug(f'Processing email [{email_id}]: {email_data}')
+    attachment_list = email_data['data']['attachments']
+    for attachment in attachment_list:
+        attachment_info = {
+            'id': attachment['id'],
+            'filename': attachment['filename'],
+            'content_type': attachment['content_type'],
+            'content_disposition': attachment['content_disposition'],
+            'content_id': attachment['content_id'],
+        }
+        logger.debug(f'Attachment info: {attachment_info}')
