@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     # Resend
     resend_api_key: SecretStr = SecretStr('')
     resend_webhook_secret: SecretStr = SecretStr('')
-    resend_webhook_publish_to_redis: StrictBool = False
+    resend_webhook_publish_to_redis: bool = False
     resend_webhook_queue_maxlen: int | None = 100  # Redis Streams max length
 
 
