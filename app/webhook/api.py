@@ -7,10 +7,13 @@ Webhook endpoints.
 import logging
 
 import resend
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from redis.asyncio import Redis
 
+from app.dependencies import get_redis_session
 from app.settings import get_settings
+from app.utils import pid_str
 from task.celery_worker import process_email_received
 
 settings = get_settings()
@@ -23,7 +26,11 @@ resend.api_key = settings.resend_api_key.get_secret_value()
 
 
 @router.post('/resend/')
-async def resend_webhook(request: Request) -> JSONResponse:
+async def resend_webhook(
+    request: Request, redis_session: Redis = Depends(get_redis_session)
+) -> JSONResponse:
+    logger.debug(f'Resend webhook endpoint [{await pid_str()}]...')
+
     raw_data = await request.body()
 
     # Extract Svix headers
@@ -55,5 +62,14 @@ async def resend_webhook(request: Request) -> JSONResponse:
             process_email_received.delay(json_data)
         case _:
             pass
+
+    # Add to Redis Streams for other services to consume
+    if settings.resend_webhook_publish_to_redis:
+        await redis_session.xadd(
+            f'{settings.cache_prefix}:webhook:resend',
+            json_data,
+            maxlen=settings.resend_webhook_queue_maxlen,
+        )
+        logger.debug(f'Resend webhook data added to Redis [{await pid_str()}]...')
 
     return JSONResponse({'success': True})
