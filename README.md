@@ -14,13 +14,14 @@ GitHub Actions, automatic HTTPS and more.
 - Containerization support: `Docker`
 - Workflow support: `GitHub Actions`
 - Automatic HTTPS support: `Automatic HTTPS`
+- Webhook integration: `Resend`
 
 ## System Requirements
 
 - Python 3.13+
 - PostgreSQL 16+
 - Redis 8.4+
-- RabbitMQ 4.2+
+- RabbitMQ 4.2+ (Optional)
 - Docker Engine 29.1+
 - Automatic HTTPS
 
@@ -46,10 +47,10 @@ SQL_DB_POOL_TIMEOUT=5.0
 
 # Cache (Redis)
 REDIS_URL=redis://:foobared@localhost:6379/0
-CACHE_PREFIX=
 CACHE_MAX_CONNS=4096
 CACHE_CONN_TIMEOUT=3.0
 CACHE_TIMEOUT=3.5
+CACHE_PREFIX=fastapi-template
 
 # Task (Celery with RabbitMQ/Redis)
 TASK_QUEUE_BROKER=amqp://guest:guest@localhost:5672
@@ -59,6 +60,10 @@ TASK_TIME_LIMIT=60
 TASK_QUEUE_BROKER_CONNECTION_TIMEOUT=3.0
 TASK_QUEUE_BROKER_CONNECTION_MAX_RETRIES=3
 TASK_QUEUE_RESULT_EXPIRES=86400
+
+# Resend
+#RESEND_API_KEY=resend_api_key
+#RESEND_WEBHOOK_SECRET=resend_webhook_secret
 
 # uvicorn
 UVICORN_PORT=8000

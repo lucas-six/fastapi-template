@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import AmqpDsn, PostgresDsn, RedisDsn
+from pydantic import AmqpDsn, PostgresDsn, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     cache_max_conns: int = 4096
     cache_conn_timeout: float | None = 3.0
     cache_timeout: float | None = 3.5
-    cache_prefix: str = ''
+    cache_prefix: str = 'fastapi-template'
 
     # Task (Celery)
     task_queue_broker: RedisDsn | AmqpDsn = AmqpDsn('amqp://guest:guest@localhost:5672')
@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     task_queue_broker_connection_max_retries: int = 3
     task_queue_result_expires: int = 60 * 60 * 24
     # task_queue_default_retry_delay: int = 60
+
+    # Resend
+    resend_api_key: SecretStr = SecretStr('')
+    resend_webhook_secret: SecretStr = SecretStr('')
 
 
 @lru_cache
