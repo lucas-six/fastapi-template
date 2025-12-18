@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import AmqpDsn, PostgresDsn, RedisDsn, SecretStr
+from pydantic import AmqpDsn, PostgresDsn, RedisDsn, SecretStr, StrictBool
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database (PostgreSQL)
-    sql_db_enabled: bool = False
+    sql_db_enabled: StrictBool = False
     sql_db_url: PostgresDsn = PostgresDsn(
         'postgresql+psycopg://postgres:postgres@localhost:5432/postgres'
     )
@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # Resend
     resend_api_key: SecretStr = SecretStr('')
     resend_webhook_secret: SecretStr = SecretStr('')
+    resend_webhook_publish_to_redis: StrictBool = False
+    resend_webhook_queue_maxlen: int | None = 100  # Redis Streams max length
 
 
 @lru_cache
