@@ -114,7 +114,14 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
 
     attachment_list = email_data['data']['attachments']
     s3_keys: dict[str, str] = {}
-    with httpx.Client() as http_client, SQLSession(sql_db_engine) as sql_session:
+    timeout_config = httpx.Timeout(
+        connect=settings.resend_webhook_attachments_download_conn_timeout,
+        read=settings.resend_webhook_attachments_download_timeout,
+    )
+    with (
+        httpx.Client(timeout=timeout_config) as http_client,
+        SQLSession(sql_db_engine) as sql_session,
+    ):
         for attachment in attachment_list:
             attachment_id = attachment['id']
             content_type = attachment['content_type']
