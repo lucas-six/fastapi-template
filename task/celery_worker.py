@@ -8,7 +8,8 @@ from typing import Any, TypedDict
 import boto3
 import httpx
 import resend
-from botocore.config import Config
+from boto3.s3.transfer import TransferConfig as S3TransferConfig
+from botocore.config import Config as S3Config
 from celery import Celery
 from redis import Redis
 from sqlmodel import Session as SQLSession
@@ -101,15 +102,19 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
             s3_client = boto3_session.client(
                 's3',
                 endpoint_url=settings.resend_attachments_s3_endpoint_url.encoded_string(),
-                config=Config(
+                config=S3Config(
                     signature_version=settings.resend_attachments_s3_signature_version,
                     s3={'addressing_style': settings.resend_attachments_s3_addressing_style},  # pyright: ignore[reportArgumentType]
+                    connect_timeout=settings.resend_attachments_s3_conn_timeout,
                 ),
             )
         else:
             s3_client = boto3_session.client(
                 's3',
                 region_name=settings.resend_attachments_s3_region,
+                config=S3Config(
+                    connect_timeout=settings.resend_attachments_s3_conn_timeout,
+                ),
             )
 
     attachment_list = email_data['data']['attachments']
@@ -139,7 +144,12 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
                     ]
                 )
                 s3_client.upload_fileobj(
-                    BytesIO(attachment_response.content), bucket_name, bucket_key
+                    BytesIO(attachment_response.content),
+                    bucket_name,
+                    bucket_key,
+                    Config=S3TransferConfig(
+                        multipart_threshold=settings.resend_attachments_s3_multipart_threshold
+                    ),
                 )
 
                 sql_session.add(
