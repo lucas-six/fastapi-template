@@ -7,7 +7,6 @@ Webhook endpoints.
 import logging
 
 import resend
-from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
@@ -15,7 +14,7 @@ from redis.asyncio import Redis
 from app.dependencies import get_redis_session
 from app.settings import get_settings
 from app.utils import pid_str
-from task.celery_worker import process_email_received
+from task.celery_worker import resend_process_email_received
 
 settings = get_settings()
 
@@ -61,7 +60,7 @@ async def resend_webhook(
             email_id = json_data['data']['email_id']
             email_from = json_data['data']['from']
             logger.info(f'Email received [{email_id}] from {email_from}')
-            task = process_email_received.delay(json_data)
+            task = resend_process_email_received.delay(json_data)
             logger.debug(f'Email received task {task.id} delayed')
         case _:
             pass
@@ -79,12 +78,3 @@ async def resend_webhook(
     if task:
         rsp['task_id'] = task.id
     return JSONResponse(rsp)
-
-
-@router.get('/status/{task_id}')
-async def status(task_id: str, request: Request) -> dict[str, str | bool | None]:
-    task = AsyncResult(task_id)
-    if task.ready():
-        return {'ready': True, 'result': task.get()}
-    else:
-        return {'ready': False}
