@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     resend_attachments_s3_addressing_style: str = 'virtual'
     resend_attachments_s3_bucket: str = 'resend-attachments'
     resend_attachments_s3_prefix: str = ''
+    resend_attachments_s3_presigned_expire: int = 3600
 
 
 @lru_cache
