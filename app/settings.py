@@ -56,11 +56,13 @@ class Settings(BaseSettings):
     resend_attachments_s3_access_secret: SecretStr = SecretStr('')
     resend_attachments_s3_region: str = ''
     resend_attachments_s3_endpoint_url: HttpUrl | None = None  # Aliyun OSS
+    resend_attachments_s3_conn_timeout: float = 4.5
     resend_attachments_s3_signature_version: str = 's3'
     resend_attachments_s3_addressing_style: str = 'virtual'
     resend_attachments_s3_bucket: str = 'resend-attachments'
     resend_attachments_s3_prefix: str = ''
     resend_attachments_s3_presigned_expire: int = 3600
+    resend_attachments_s3_multipart_threshold: int = 1024**3
 
 
 @lru_cache
