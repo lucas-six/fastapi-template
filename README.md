@@ -22,6 +22,7 @@ GitHub Actions, automatic HTTPS and more.
 - PostgreSQL 16+
 - Redis 8.4+
 - RabbitMQ 4.2+ (Optional)
+- S3 compatible storage (Optional)
 - Docker Engine 29.1+
 - Automatic HTTPS
 
@@ -66,6 +67,13 @@ TASK_QUEUE_RESULT_EXPIRES=86400
 #RESEND_WEBHOOK_SECRET=resend_webhook_secret
 #RESEND_WEBHOOK_PUBLISH_TO_REDIS=false
 #RESEND_WEBHOOK_QUEUE_MAXLEN=100
+RESEND_ATTACHMENTS_S3_ACCESS_KEY_ID=s3_access_key_id
+RESEND_ATTACHMENTS_S3_ACCESS_SECRET=s3_access_secret
+#RESEND_ATTACHMENTS_S3_REGION=
+RESEND_ATTACHMENTS_S3_ENDPOINT_URL=https://s3.oss-cn-hangzhou.aliyuncs.com
+RESEND_ATTACHMENTS_S3_SIGNATURE_VERSION=s3
+RESEND_ATTACHMENTS_S3_ADDRESSING_STYLE=virtual
+RESEND_ATTACHMENTS_S3_BUCKET=resend-attachments
 
 # uvicorn
 UVICORN_PORT=8000
@@ -83,6 +91,7 @@ UVICORN_TIMEOUT_KEEP_ALIVE=5
 
 ```bash
 uv run -m app.app
+uv run --env-file .env celery -A task.celery_worker worker --loglevel=debug --concurrency=1
 ```
 
 ```bash

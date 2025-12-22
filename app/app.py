@@ -134,9 +134,9 @@ async def root(
 async def status(task_id: str, request: Request) -> dict[str, str | bool | None]:
     task = AsyncResult(task_id)
     if task.ready():
-        return {'status': 'DONE', 'result': task.get()}
+        return {'ready': True, 'result': task.get()}
     else:
-        return {'status': 'IN_PROGRESS'}
+        return {'ready': False}
 
 
 # Only for develop environment
