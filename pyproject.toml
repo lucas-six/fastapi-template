@@ -14,6 +14,7 @@ dependencies = [
     "redis[hiredis]>=7.1.0",
     "resend>=2.19.0",
     "sqlmodel>=0.0.27",
+    "types-boto3[essential]>=1.42.14",
     "types-redis>=4.6.0.20241004",
     "uvicorn[standard]",
 ]

@@ -3,7 +3,7 @@
 import logging
 import os
 from io import BytesIO
-from typing import Any
+from typing import Any, TypedDict
 
 import boto3
 import httpx
@@ -12,6 +12,7 @@ from botocore.config import Config
 from celery import Celery
 from sqlmodel import Session as SQLSession
 from sqlmodel import create_engine
+from types_boto3_s3.client import S3Client
 
 from app.db_models import EmailAttachment, EmailWebhookEnum, EmailWebhookEventTypeEnum
 from app.settings import get_settings
@@ -49,6 +50,11 @@ celery_app = Celery(
 celery_app.config_from_object('task.celeryconfig')
 
 
+class ResendProcessEmailReceivedResult(TypedDict):
+    save_to_s3: bool
+    s3_keys: dict[str, str]
+
+
 @celery_app.task(ignore_result=True)
 def heartbeat() -> None:
     logger.debug('heartbeat')
@@ -60,12 +66,13 @@ def do_something() -> None:
 
 
 @celery_app.task
-def resend_process_email_received(email_data: dict[str, Any]) -> None:
+def resend_process_email_received(email_data: dict[str, Any]) -> ResendProcessEmailReceivedResult:
     email_id = email_data['data']['email_id']
     logger.debug(f'Processing email [{email_id}]: {email_data}')
 
     # Save attachment to S3
-    s3_client: boto3.client | None = None
+    s3_client: S3Client | None = None
+    bucket_name = settings.resend_attachments_s3_bucket
     if settings.resend_attachments_s3_access_key_id:
         boto3_session = boto3.Session(
             aws_access_key_id=settings.resend_attachments_s3_access_key_id,
@@ -78,7 +85,7 @@ def resend_process_email_received(email_data: dict[str, Any]) -> None:
                 endpoint_url=settings.resend_attachments_s3_endpoint_url.encoded_string(),
                 config=Config(
                     signature_version=settings.resend_attachments_s3_signature_version,
-                    s3={'addressing_style': settings.resend_attachments_s3_addressing_style},
+                    s3={'addressing_style': settings.resend_attachments_s3_addressing_style},  # pyright: ignore[reportArgumentType]
                 ),
             )
         else:
@@ -88,6 +95,7 @@ def resend_process_email_received(email_data: dict[str, Any]) -> None:
             )
 
     attachment_list = email_data['data']['attachments']
+    s3_keys: dict[str, str] = {}
     with httpx.Client() as http_client, SQLSession(sql_db_engine) as sql_session:
         for attachment in attachment_list:
             attachment_id = attachment['id']
@@ -99,15 +107,14 @@ def resend_process_email_received(email_data: dict[str, Any]) -> None:
 
                 attachment_detail = resend.Emails.Receiving.Attachments.get(email_id, attachment_id)
                 attachment_response = http_client.get(attachment_detail['download_url'])
+                bucket_key = '/'.join(
+                    [
+                        settings.resend_attachments_s3_prefix,
+                        f'resend_{email_id}_{attachment_id}.{file_ext}',
+                    ]
+                )
                 s3_client.upload_fileobj(
-                    BytesIO(attachment_response.content),
-                    settings.resend_attachments_s3_bucket,
-                    '/'.join(
-                        [
-                            settings.resend_attachments_s3_prefix,
-                            f'resend_{email_id}_{attachment_id}.{file_ext}',
-                        ]
-                    ),
+                    BytesIO(attachment_response.content), bucket_name, bucket_key
                 )
 
                 sql_session.add(
@@ -125,8 +132,17 @@ def resend_process_email_received(email_data: dict[str, Any]) -> None:
                         file_size=attachment_detail['size'],
                         created_at=email_data['data']['created_at'],
                         s3_region=settings.resend_attachments_s3_region,
-                        s3_bucket=settings.resend_attachments_s3_bucket,
-                        s3_key=f'{settings.resend_attachments_s3_prefix}/{email_id}/{attachment_id}.{file_ext}',
+                        s3_bucket=bucket_name,
+                        s3_key=bucket_key,
                     )
                 )
+
+                s3_keys[bucket_key] = s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': bucket_name, 'Key': bucket_key},
+                    ExpiresIn=settings.resend_attachments_s3_presigned_expire,
+                )
+
         sql_session.commit()
+
+    return {'save_to_s3': s3_client is not None, 's3_keys': s3_keys}
