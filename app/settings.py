@@ -50,7 +50,6 @@ class Settings(BaseSettings):
     resend_webhook_publish_to_redis: bool = False
     resend_webhook_queue_maxlen: int | None = 100  # Redis Streams max length
     resend_webhook_lock_expire: int = 10  # Webhook lock expire time
-    resend_webhook_attachments_download_conn_timeout: float = 4.5
     resend_webhook_attachments_download_timeout: float = 10.0
     resend_attachments_s3_access_key_id: str | None = None
     resend_attachments_s3_access_secret: SecretStr = SecretStr('')
