@@ -10,6 +10,7 @@ import httpx
 import resend
 from botocore.config import Config
 from celery import Celery
+from redis import Redis
 from sqlmodel import Session as SQLSession
 from sqlmodel import create_engine
 from types_boto3_s3.client import S3Client
@@ -37,6 +38,16 @@ sql_db_engine = create_engine(
     echo=False,
 )
 
+redis_client = Redis.from_url(
+    settings.redis_url.encoded_string(),
+    encoding='utf-8',
+    decode_responses=True,
+    max_connections=settings.cache_max_conns,
+    socket_connect_timeout=settings.cache_conn_timeout,
+    socket_timeout=settings.cache_timeout,
+    client_name=client_name,
+)
+
 
 celery_app = Celery(
     settings.app_name,
@@ -50,7 +61,7 @@ celery_app = Celery(
 celery_app.config_from_object('task.celeryconfig')
 
 
-class ResendProcessEmailReceivedResult(TypedDict):
+class HandleResendEmailReceivedResult(TypedDict):
     save_to_s3: bool
     s3_keys: dict[str, str]
 
@@ -66,7 +77,14 @@ def do_something() -> None:
 
 
 @celery_app.task
-def resend_process_email_received(email_data: dict[str, Any]) -> ResendProcessEmailReceivedResult:
+def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmailReceivedResult:
+    """Handle Resend email received event."""
+    message_id = email_data['data']['message_id']
+    message_lock_key = f'{settings.cache_prefix}:webhook:resend:message:{message_id}'
+    if redis_client.exists(message_lock_key):
+        return {'save_to_s3': False, 's3_keys': {}}
+    redis_client.set(message_lock_key, '1', ex=settings.resend_webhook_lock_expire)
+
     email_id = email_data['data']['email_id']
     logger.debug(f'Processing email [{email_id}]: {email_data}')
 
@@ -121,7 +139,7 @@ def resend_process_email_received(email_data: dict[str, Any]) -> ResendProcessEm
                     EmailAttachment(
                         webhook=EmailWebhookEnum.RESEND,
                         webhook_event_type=EmailWebhookEventTypeEnum.EMAIL_RECEIVED,
-                        message_id=email_data['data']['message_id'],
+                        message_id=message_id,
                         email_id=email_id,
                         attachment_id=attachment_id,
                         email_subject=email_data['data']['subject'],
