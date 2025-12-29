@@ -15,6 +15,7 @@ GitHub Actions, automatic HTTPS and more.
 - Workflow support: `GitHub Actions`
 - Automatic HTTPS support: `Automatic HTTPS`
 - Webhook integration: `Resend`
+- S3 compatible storage support: `Amazon S3` or `Aliyun OSS`
 
 ## System Requirements
 
@@ -78,6 +79,7 @@ TASK_QUEUE_RESULT_EXPIRES=86400
 ##RESEND_ATTACHMENTS_S3_ADDRESSING_STYLE=virtual
 ##RESEND_ATTACHMENTS_S3_BUCKET=resend-attachments
 ##RESEND_ATTACHMENTS_S3_PREFIX=origin
+## 0 for no presigned URL
 ##RESEND_ATTACHMENTS_S3_PRESIGNED_EXPIRE=3600
 ##RESEND_ATTACHMENTS_S3_MULTIPART_THRESHOLD=1073741824
 
