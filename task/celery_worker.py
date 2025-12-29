@@ -2,6 +2,7 @@
 
 import logging
 import os
+from enum import StrEnum
 from io import BytesIO
 from typing import Any, TypedDict
 
@@ -62,7 +63,16 @@ celery_app = Celery(
 celery_app.config_from_object('task.celeryconfig')
 
 
+class HandleResendEmailReceivedStatusEnum(StrEnum):
+    """Handle Resend Email Received Status Enum."""
+
+    SUCCESS = 'success'
+    FAILED = 'failed'
+    PROCESSING = 'processing'
+
+
 class HandleResendEmailReceivedResult(TypedDict):
+    status: HandleResendEmailReceivedStatusEnum
     save_to_s3: bool
     s3_keys: dict[str, str]
 
@@ -80,10 +90,15 @@ def do_something() -> None:
 @celery_app.task
 def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmailReceivedResult:
     """Handle Resend email received event."""
+    # Check if the message is already processed
     message_id = email_data['data']['message_id']
     message_lock_key = f'{settings.cache_prefix}:webhook:resend:message:{message_id}'
     if redis_client.exists(message_lock_key):
-        return {'save_to_s3': False, 's3_keys': {}}
+        return {
+            'status': HandleResendEmailReceivedStatusEnum.PROCESSING,
+            'save_to_s3': False,
+            's3_keys': {},
+        }
     redis_client.set(message_lock_key, '1', ex=settings.resend_webhook_lock_expire)
 
     email_id = email_data['data']['email_id']
@@ -178,4 +193,8 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
 
         sql_session.commit()
 
-    return {'save_to_s3': s3_client is not None, 's3_keys': s3_keys}
+    return {
+        'status': HandleResendEmailReceivedStatusEnum.SUCCESS,
+        'save_to_s3': s3_client is not None,
+        's3_keys': s3_keys,
+    }
