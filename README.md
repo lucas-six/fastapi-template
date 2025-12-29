@@ -2,7 +2,7 @@
 
 FastAPI template.
 Using FastAPI, SQLModel, PostgreSQL, Redis, Celery, RabbitMQ, Docker,
-GitHub Actions, automatic HTTPS and more.
+GitHub Actions, S3 compatible storage and more.
 
 ## Features
 
@@ -13,7 +13,6 @@ GitHub Actions, automatic HTTPS and more.
 - Message Queue support: `RabbitMQ`
 - Containerization support: `Docker`
 - Workflow support: `GitHub Actions`
-- Automatic HTTPS support: `Automatic HTTPS`
 - Webhook integration: `Resend`
 - S3 compatible storage support: `Amazon S3` or `Aliyun OSS`
 
@@ -25,7 +24,6 @@ GitHub Actions, automatic HTTPS and more.
 - RabbitMQ 4.2+ (Optional)
 - S3 compatible storage (Optional)
 - Docker Engine 29.1+
-- Automatic HTTPS
 
 ## Usage
 
