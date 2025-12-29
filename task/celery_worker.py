@@ -185,11 +185,17 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
                 )
 
                 if settings.resend_attachments_s3_presigned_expire > 0:
-                    s3_keys[bucket_key] = s3_client.generate_presigned_url(
+                    s3_presigned_url = s3_client.generate_presigned_url(
                         'get_object',
                         Params={'Bucket': bucket_name, 'Key': bucket_key},
                         ExpiresIn=settings.resend_attachments_s3_presigned_expire,
                     )
+                    s3_keys[bucket_key] = s3_presigned_url
+
+                    # Cache the presigned URL
+                    ck_s3 = f'{settings.cache_prefix}:s3:presigned_url:{bucket_name}'
+                    redis_client.hset(ck_s3, bucket_key, s3_presigned_url)
+                    redis_client.expire(ck_s3, settings.resend_attachments_s3_presigned_expire)
 
         sql_session.commit()
 
