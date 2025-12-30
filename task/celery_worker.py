@@ -215,7 +215,7 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
                 if ai_file_id is None:
                     ai_fileobj = ai_client.files.create(
                         file=BytesIO(attachment_response.content),
-                        purpose='file-extract',  # type: ignore
+                        purpose='file-extract',  # pyright: ignore[reportArgumentType]
                         timeout=settings.ai_api_upload_file_timeout,
                     )
                     ai_file_id = ai_fileobj.id
