@@ -12,6 +12,7 @@ import resend
 from boto3.s3.transfer import TransferConfig as S3TransferConfig
 from botocore.config import Config as S3Config
 from celery import Celery
+from openai import OpenAI
 from redis import Redis
 from sqlmodel import Session as SQLSession
 from sqlmodel import create_engine
@@ -62,6 +63,12 @@ celery_app = Celery(
 )
 celery_app.config_from_object('task.celeryconfig')
 
+ai_client = OpenAI(
+    api_key=settings.ai_api_key.get_secret_value(),
+    base_url=settings.ai_api_base_url.encoded_string() if settings.ai_api_base_url else None,
+    max_retries=settings.ai_api_max_retries,
+)
+
 
 class HandleResendEmailReceivedStatusEnum(StrEnum):
     """Handle Resend Email Received Status Enum."""
@@ -75,6 +82,8 @@ class HandleResendEmailReceivedResult(TypedDict):
     status: HandleResendEmailReceivedStatusEnum
     save_to_s3: bool
     s3_keys: dict[str, str]
+    upload_to_ai: bool
+    ai_file_ids: dict[str, str | None]
 
 
 @celery_app.task(ignore_result=True)
@@ -93,11 +102,15 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
     # Check if the message is already processed
     message_id = email_data['data']['message_id']
     message_lock_key = f'{settings.cache_prefix}:webhook:resend:message:{message_id}'
+    save_to_s3 = settings.resend_attachments_s3_access_key_id is not None
+    upload_to_ai = settings.ai_api_base_url is not None
     if redis_client.exists(message_lock_key):
         return {
             'status': HandleResendEmailReceivedStatusEnum.PROCESSING,
-            'save_to_s3': False,
+            'save_to_s3': save_to_s3,
             's3_keys': {},
+            'upload_to_ai': upload_to_ai,
+            'ai_file_ids': {},
         }
     redis_client.set(message_lock_key, '1', ex=settings.resend_webhook_lock_expire)
 
@@ -107,7 +120,7 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
     # Save attachment to S3
     s3_client: S3Client | None = None
     bucket_name = settings.resend_attachments_s3_bucket
-    if settings.resend_attachments_s3_access_key_id:
+    if save_to_s3:
         boto3_session = boto3.Session(
             aws_access_key_id=settings.resend_attachments_s3_access_key_id,
             aws_secret_access_key=settings.resend_attachments_s3_access_secret.get_secret_value(),
@@ -134,6 +147,7 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
 
     attachment_list = email_data['data']['attachments']
     s3_keys: dict[str, str] = {}
+    ai_file_ids: dict[str, str | None] = {}
     download_timeout_config = httpx.Timeout(settings.resend_webhook_attachments_download_timeout)
     with (
         httpx.Client(timeout=download_timeout_config) as http_client,
@@ -142,19 +156,16 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
         for attachment in attachment_list:
             attachment_id = attachment['id']
             content_type = attachment['content_type']
+            file_ext = content_type.split('/')[-1]
+            file_name = f'resend_{email_id}_{attachment_id}.{file_ext}'
+
+            if s3_client or settings.ai_api_base_url is not None:
+                attachment_detail = resend.Emails.Receiving.Attachments.get(email_id, attachment_id)
+                attachment_response = http_client.get(attachment_detail['download_url'])
 
             # Save attachment to S3
             if s3_client:
-                file_ext = content_type.split('/')[-1]
-
-                attachment_detail = resend.Emails.Receiving.Attachments.get(email_id, attachment_id)
-                attachment_response = http_client.get(attachment_detail['download_url'])
-                bucket_key = '/'.join(
-                    [
-                        settings.resend_attachments_s3_prefix,
-                        f'resend_{email_id}_{attachment_id}.{file_ext}',
-                    ]
-                )
+                bucket_key = '/'.join([settings.resend_attachments_s3_prefix, file_name])
                 s3_client.upload_fileobj(
                     BytesIO(attachment_response.content),
                     bucket_name,
@@ -197,10 +208,28 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
                     redis_client.hset(ck_s3, bucket_key, s3_presigned_url)
                     redis_client.expire(ck_s3, settings.resend_attachments_s3_presigned_expire)
 
+            # Upload attachment to AI
+            ck_ai_files = f'{settings.cache_prefix}:ai:files'
+            ai_file_id = redis_client.hget(ck_ai_files, file_name)
+            if upload_to_ai:
+                if ai_file_id is None:
+                    ai_fileobj = ai_client.files.create(
+                        file=BytesIO(attachment_response.content),
+                        purpose='file-extract',  # pyright: ignore[reportArgumentType]
+                        timeout=settings.ai_api_upload_file_timeout,
+                    )
+                    ai_file_id = ai_fileobj.id
+                    redis_client.hset(ck_ai_files, file_name, ai_file_id)
+                else:
+                    logger.debug(f'AI file [{ai_file_id}] already exists')
+            ai_file_ids[file_name] = ai_file_id
+
         sql_session.commit()
 
     return {
         'status': HandleResendEmailReceivedStatusEnum.SUCCESS,
-        'save_to_s3': s3_client is not None,
+        'save_to_s3': save_to_s3,
         's3_keys': s3_keys,
+        'upload_to_ai': upload_to_ai,
+        'ai_file_ids': ai_file_ids,
     }

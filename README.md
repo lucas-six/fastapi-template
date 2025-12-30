@@ -15,6 +15,7 @@ GitHub Actions, S3 compatible storage and more.
 - Workflow support: `GitHub Actions`
 - Webhook integration: `Resend`
 - S3 compatible storage support: `Amazon S3` or `Aliyun OSS`
+- AI support: `OpenAI`
 
 ## System Requirements
 
@@ -24,6 +25,7 @@ GitHub Actions, S3 compatible storage and more.
 - RabbitMQ 4.2+ (Optional)
 - S3 compatible storage (Optional)
 - Docker Engine 29.1+
+- OpenAI API Key (Optional)
 
 ## Usage
 
@@ -80,6 +82,13 @@ TASK_QUEUE_RESULT_EXPIRES=86400
 ## 0 for no presigned URL
 ##RESEND_ATTACHMENTS_S3_PRESIGNED_EXPIRE=3600
 ##RESEND_ATTACHMENTS_S3_MULTIPART_THRESHOLD=1073741824
+
+# AI (OpenAI)
+#AI_API_KEY=openai_api_key
+#AI_API_BASE_URL=openai_api_base_url
+#AI_API_MODEL=openai_api_model
+#AI_API_MAX_RETRIES=2
+#AI_API_UPLOAD_FILE_TIMEOUT=10.0
 
 # uvicorn
 UVICORN_PORT=8000
