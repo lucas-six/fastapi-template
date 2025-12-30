@@ -4,6 +4,8 @@ from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
 from alembic import context
+import alembic_postgresql_enum
+from app.db_models import EmailAttachment, TemplateDemo
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
