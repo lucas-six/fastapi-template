@@ -8,8 +8,10 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.17.2",
     "boto3>=1.42.12",
+    "celery-types>=0.24.0",
     "celery[librabbitmq,redis]>=5.3.1",
     "fastapi[all]",
+    "openai>=2.14.0",
     "psycopg[binary]>=3.2.13",
     "redis[hiredis]>=7.1.0",
     "resend>=2.19.0",

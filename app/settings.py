@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     resend_attachments_s3_presigned_expire: int = 3600
     resend_attachments_s3_multipart_threshold: int = 1024**3
 
+    # AI
+    ai_api_key: SecretStr = SecretStr('')
+    ai_api_base_url: HttpUrl | None = None
+    ai_api_max_retries: int = 2
+    ai_api_model: str
+    ai_api_upload_file_timeout: float = 10.0
+
 
 @lru_cache
 def get_settings() -> Settings:
