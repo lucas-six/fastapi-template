@@ -3,6 +3,8 @@
 import logging
 import os
 from enum import StrEnum
+from hashlib import sha256
+from hmac import compare_digest
 from io import BytesIO
 from typing import Any, TypedDict
 
@@ -149,6 +151,8 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
     s3_keys: dict[str, str] = {}
     ai_file_ids: dict[str, str | None] = {}
     download_timeout_config = httpx.Timeout(settings.resend_webhook_attachments_download_timeout)
+    ck_file_digest = f'{settings.cache_prefix}:file_digest'
+    ck_ai_files = f'{settings.cache_prefix}:ai:files'
     with (
         httpx.Client(timeout=download_timeout_config) as http_client,
         SQLSession(sql_db_engine) as sql_session,
@@ -159,9 +163,13 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
             file_ext = content_type.split('/')[-1]
             file_name = f'resend_{email_id}_{attachment_id}.{file_ext}'
 
-            if s3_client or settings.ai_api_base_url is not None:
+            if s3_client or upload_to_ai:
                 attachment_detail = resend.Emails.Receiving.Attachments.get(email_id, attachment_id)
                 attachment_response = http_client.get(attachment_detail['download_url'])
+
+                # Calculate the SHA-256 hash of the attachment
+                sha256_hash = sha256(attachment_response.content)
+                file_digest = sha256_hash.hexdigest()
 
             # Save attachment to S3
             if s3_client:
@@ -209,7 +217,6 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
                     redis_client.expire(ck_s3, settings.resend_attachments_s3_presigned_expire)
 
             # Upload attachment to AI
-            ck_ai_files = f'{settings.cache_prefix}:ai:files'
             ai_file_id = redis_client.hget(ck_ai_files, file_name)
             if upload_to_ai:
                 if ai_file_id is None:
@@ -220,8 +227,28 @@ def handle_resend_email_received(email_data: dict[str, Any]) -> HandleResendEmai
                     )
                     ai_file_id = ai_fileobj.id
                     redis_client.hset(ck_ai_files, file_name, ai_file_id)
+
                 else:
                     logger.debug(f'AI file [{ai_file_id}] already exists')
+
+                    # Replace the AI file if the digest is different
+                    ai_file_digest = redis_client.hget(ck_file_digest, file_name)
+                    if ai_file_digest is not None and not compare_digest(
+                        file_digest.encode('utf-8'), ai_file_digest.encode('utf-8')
+                    ):
+                        logger.debug(
+                            f'AI file [{ai_file_id}] is different, deleting and creating new one'
+                        )
+                        ai_client.files.delete(ai_file_id)
+                        ai_fileobj = ai_client.files.create(
+                            file=BytesIO(attachment_response.content),
+                            purpose='file-extract',  # pyright: ignore[reportArgumentType]
+                            timeout=settings.ai_api_upload_file_timeout,
+                        )
+                        ai_file_id = ai_fileobj.id
+                        redis_client.hset(ck_ai_files, file_name, ai_file_id)
+                redis_client.hset(ck_file_digest, file_name, file_digest)
+
             ai_file_ids[file_name] = ai_file_id
 
         sql_session.commit()
