@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     cache_timeout: float | None = 3.5
     cache_prefix: str = 'fastapi-template'
 
-    # Task (Celery)
+    # Task (Celery with RabbitMQ/Redis)
     task_queue_broker: RedisDsn | AmqpDsn = AmqpDsn('amqp://guest:guest@localhost:5672')
     task_queue_backend: RedisDsn | None = None
     task_time_limit: int | None = None  # 任务执行时间限制（秒）

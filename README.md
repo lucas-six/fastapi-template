@@ -23,11 +23,11 @@ GitHub Actions, S3 compatible storage, AI APIs and more.
 - PostgreSQL 16+
 - Redis 8+
 - RabbitMQ 4.2+ (optional)
-- S3 storage: AWS S3, Aliyun OSS (optional)
+- S3 storage: `AWS S3`, `Aliyun OSS` (optional)
 - Docker Engine 29.1+
 - Integration
   - Email: `Resend`
-  - AI: `QWen`
+  - AI: `OpenAI`, `QWen`
 
 ## Usage
 
@@ -107,7 +107,12 @@ UVICORN_TIMEOUT_KEEP_ALIVE=5
 #### Development / Testing
 
 ```bash
+# Run database migrations
+uv run alembic check
+uv run alembic upgrade head
+
 uv run -m app.app
+# uv run uvicorn --host 0.0.0.0 --port 8000 app.app:app
 uv run --env-file .env celery -A task.celery_worker worker --loglevel=debug --concurrency=1
 ```
 
