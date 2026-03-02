@@ -73,7 +73,6 @@ ai_client = OpenAI(
 
 class HandleResendEmailReceivedResult(TypedDict):
     save_to_s3: bool
-    s3_keys: dict[str, str]
     ai_file_ids: dict[str, str | None]
 
 
@@ -125,7 +124,6 @@ def handle_resend_email_received(
             )
 
     attachment_list = email_data['data']['attachments']
-    s3_keys: dict[str, str] = {}
     ai_file_ids: dict[str, str | None] = {}
     download_timeout_config = httpx.Timeout(settings.resend_webhook_attachments_download_timeout)
     ck_file_digest = f'{settings.cache_prefix}:file_digest'
@@ -179,19 +177,6 @@ def handle_resend_email_received(
                     )
                 )
 
-                if settings.resend_attachments_s3_presigned_expire > 0:
-                    s3_presigned_url = s3_client.generate_presigned_url(
-                        'get_object',
-                        Params={'Bucket': bucket_name, 'Key': bucket_key},
-                        ExpiresIn=settings.resend_attachments_s3_presigned_expire,
-                    )
-                    s3_keys[bucket_key] = s3_presigned_url
-
-                    # Cache the presigned URL
-                    ck_s3 = f'{settings.cache_prefix}:s3:presigned_url:{bucket_name}'
-                    redis_client.hset(ck_s3, bucket_key, s3_presigned_url)
-                    redis_client.expire(ck_s3, settings.resend_attachments_s3_presigned_expire)
-
             # Upload attachments to AI
             ai_file_id = redis_client.hget(ck_ai_files, file_name)
             if ai_file_id is None:
@@ -233,6 +218,5 @@ def handle_resend_email_received(
 
     return {
         'save_to_s3': save_to_s3,
-        's3_keys': s3_keys,
         'ai_file_ids': ai_file_ids,
     }
