@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     # task_queue_default_retry_delay: int = 60
 
     # Resend
-    resend_api_key: SecretStr = SecretStr('')
-    resend_webhook_secret: SecretStr = SecretStr('')
+    resend_api_key: SecretStr
+    resend_webhook_secret: SecretStr
     resend_webhook_publish_to_redis: bool = False
     resend_webhook_queue_maxlen: int | None = 100  # Redis Streams max length
     resend_webhook_lock_expire: int = 10  # Webhook lock expire time

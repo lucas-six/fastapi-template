@@ -13,9 +13,9 @@ GitHub Actions, S3 compatible storage, AI APIs and more.
 - Message Queue support: `RabbitMQ`
 - Containerization support: `Docker`
 - Workflow support: `GitHub Actions`
-- Webhook integration: `Resend`
+- Email integration: `Resend`
 - S3 compatible storage support: `Amazon S3` or `Aliyun OSS`
-- AI support: `QWen`
+- AI support: `Qwen`
 
 ## System Requirements
 
@@ -27,7 +27,7 @@ GitHub Actions, S3 compatible storage, AI APIs and more.
 - Docker Engine 29.1+
 - Integration
   - Email: `Resend`
-  - AI: `OpenAI`, `QWen`
+  - AI: `OpenAI`, `Qwen`
 
 ## Usage
 
@@ -66,9 +66,9 @@ TASK_QUEUE_BROKER_CONNECTION_MAX_RETRIES=3
 TASK_QUEUE_RESULT_EXPIRES=86400
 
 # Resend
-#RESEND_API_KEY=resend_api_key
-#RESEND_WEBHOOK_SECRET=resend_webhook_secret
-#RESEND_WEBHOOK_PUBLISH_TO_REDIS=false
+RESEND_API_KEY=
+RESEND_WEBHOOK_SECRET=
+RESEND_WEBHOOK_PUBLISH_TO_REDIS=false
 #RESEND_WEBHOOK_QUEUE_MAXLEN=100
 #RESEND_WEBHOOK_LOCK_EXPIRE=10
 ##RESEND_WEBHOOK_ATTACHMENTS_DOWNLOAD_TIMEOUT=10.0
