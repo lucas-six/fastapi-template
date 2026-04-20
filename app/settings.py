@@ -19,13 +19,12 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database (PostgreSQL)
-    sql_db_enabled: bool = False
-    sql_db_url: PostgresDsn = PostgresDsn(
+    db_url: PostgresDsn = PostgresDsn(
         'postgresql+psycopg://postgres:postgres@localhost:5432/postgres'
     )
-    sql_db_connect_timeout: float = 5.0
-    sql_db_pool_size: int = 10
-    sql_db_pool_timeout: float = 5.0
+    db_connect_timeout: float = 5.0
+    db_pool_size: int = 10
+    db_pool_timeout: float = 5.0
 
     # Cache (Redis)
     redis_url: RedisDsn = RedisDsn('redis://:foobared@localhost:6379/0')

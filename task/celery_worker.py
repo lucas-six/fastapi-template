@@ -28,18 +28,21 @@ logger = logging.getLogger('celery')
 resend.api_key = settings.resend_api_key.get_secret_value()
 
 client_name = f'{settings.app_name}-celery-{os.getpid()}'.replace(' ', '-')
-sql_db_engine = create_engine(
-    settings.sql_db_url.encoded_string(),
-    pool_size=settings.sql_db_pool_size,
+
+
+db_engine = create_engine(
+    settings.db_url.encoded_string(),
+    pool_size=settings.db_pool_size,
     max_overflow=20,
-    pool_timeout=settings.sql_db_pool_timeout,
+    pool_timeout=settings.db_pool_timeout,
     connect_args={
         'application_name': client_name,
-        'connect_timeout': settings.sql_db_connect_timeout,
+        'connect_timeout': settings.db_connect_timeout,
     },
     logging_name=client_name,
     echo=False,
 )
+
 
 redis_client = Redis.from_url(
     settings.redis_url.encoded_string(),
@@ -136,7 +139,7 @@ def handle_resend_email_attachments_to_s3(
     ck_file_digest = f'{settings.cache_prefix}:file_digest_sha256'
     with (
         httpx.Client(timeout=download_timeout_config) as http_client,
-        SQLSession(sql_db_engine) as sql_session,
+        SQLSession(db_engine) as db_session,
     ):
         for attachment in attachment_list:
             attachment_id = attachment['id']
@@ -160,7 +163,7 @@ def handle_resend_email_attachments_to_s3(
                 Config=S3TransferConfig(multipart_threshold=settings.s3_multipart_threshold),
             )
 
-            sql_session.add(
+            db_session.add(
                 EmailAttachment(
                     webhook=EmailWebhookEnum.RESEND,
                     webhook_event_type=EmailWebhookEventTypeEnum.EMAIL_RECEIVED,
@@ -182,7 +185,7 @@ def handle_resend_email_attachments_to_s3(
 
             redis_client.hset(ck_file_digest, file_name, file_digest)
 
-        sql_session.commit()
+        db_session.commit()
 
     # Release the message lock
     redis_client.delete(ck_message_lock)
@@ -205,7 +208,7 @@ def handle_resend_email_received(
     ck_ai_files = f'{settings.cache_prefix}:ai:files'
     with (
         httpx.Client(timeout=download_timeout_config) as http_client,
-        SQLSession(sql_db_engine) as sql_session,
+        SQLSession(db_engine) as db_session,
     ):
         for attachment in attachment_list:
             attachment_id = attachment['id']
@@ -254,7 +257,7 @@ def handle_resend_email_received(
 
             ai_file_ids[file_name] = ai_file_id
 
-        sql_session.commit()
+        db_session.commit()
 
     # Release the message lock
     redis_client.delete(message_lock_ck)
