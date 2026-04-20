@@ -17,7 +17,6 @@ from openai import OpenAI
 from redis import Redis
 from sqlmodel import Session as SQLSession
 from sqlmodel import create_engine
-from types_boto3_s3.client import S3Client
 
 from app.db_models import EmailAttachment, EmailWebhookEnum, EmailWebhookEventTypeEnum
 from app.settings import get_settings
@@ -64,6 +63,15 @@ celery_app = Celery(
 )
 celery_app.config_from_object('task.celeryconfig')
 
+
+# S3
+s3_session = boto3.Session(
+    aws_access_key_id=settings.s3_access_key_id,
+    aws_secret_access_key=settings.s3_access_secret.get_secret_value(),
+    region_name=settings.s3_region,
+)
+
+
 ai_client = OpenAI(
     api_key=settings.ai_api_key.get_secret_value(),
     base_url=settings.ai_api_base_url.encoded_string() if settings.ai_api_base_url else None,
@@ -71,8 +79,12 @@ ai_client = OpenAI(
 )
 
 
+class TaskResult(TypedDict):
+    ok: bool
+    msg: str
+
+
 class HandleResendEmailReceivedResult(TypedDict):
-    save_to_s3: bool
     ai_file_ids: dict[str, str | None]
 
 
@@ -87,45 +99,108 @@ def do_something() -> None:
 
 
 @celery_app.task
+def handle_resend_email_attachments_to_s3(
+    email_data: dict[str, Any], ck_message_lock: str
+) -> TaskResult:
+    """Handle Resend email attachments to S3 (Save attachments to S3)."""
+    if settings.s3_access_key_id is None or settings.s3_access_secret.get_secret_value() is None:
+        return {'ok': False, 'msg': 'S3 access key ID/secret is not set'}
+
+    bucket_name = settings.s3_bucket
+    s3_region = settings.s3_region
+    s3_endpoint_url = settings.s3_endpoint_url
+    s3_conn_timeout = settings.s3_conn_timeout
+
+    email_id = email_data['data']['email_id']
+    logger.debug(f'Saving attachments to S3 for email [{email_id}]: {email_data}')
+
+    if s3_endpoint_url:
+        s3_client = s3_session.client(
+            's3',
+            endpoint_url=s3_endpoint_url.encoded_string(),
+            config=S3Config(
+                signature_version=settings.s3_signature_version,
+                s3={'addressing_style': settings.s3_addressing_style},  # pyright: ignore[reportArgumentType]
+                connect_timeout=s3_conn_timeout,
+            ),
+        )
+    else:
+        s3_client = s3_session.client(
+            's3',
+            region_name=s3_region,
+            config=S3Config(connect_timeout=s3_conn_timeout),
+        )
+
+    attachment_list = email_data['data']['attachments']
+    download_timeout_config = httpx.Timeout(settings.resend_webhook_attachments_download_timeout)
+    ck_file_digest = f'{settings.cache_prefix}:file_digest_sha256'
+    with (
+        httpx.Client(timeout=download_timeout_config) as http_client,
+        SQLSession(sql_db_engine) as sql_session,
+    ):
+        for attachment in attachment_list:
+            attachment_id = attachment['id']
+            content_type = attachment['content_type']
+            file_ext = content_type.split('/')[-1]
+            file_name = f'resend_{email_id}_{attachment_id}.{file_ext}'
+
+            # Fetch attachments from Resend
+            attachment_detail = resend.Emails.Receiving.Attachments.get(email_id, attachment_id)
+            attachment_response = http_client.get(attachment_detail['download_url'])
+
+            # Calculate the SHA-256 hash of the attachment
+            sha256_hash = sha256(attachment_response.content)
+            file_digest = sha256_hash.hexdigest()
+
+            s3_key = '/'.join([settings.s3_key_prefix, file_name])
+            s3_client.upload_fileobj(
+                BytesIO(attachment_response.content),
+                bucket_name,
+                s3_key,
+                Config=S3TransferConfig(multipart_threshold=settings.s3_multipart_threshold),
+            )
+
+            sql_session.add(
+                EmailAttachment(
+                    webhook=EmailWebhookEnum.RESEND,
+                    webhook_event_type=EmailWebhookEventTypeEnum.EMAIL_RECEIVED,
+                    message_id=email_data['data']['message_id'],
+                    email_id=email_id,
+                    attachment_id=attachment_id,
+                    email_subject=email_data['data']['subject'],
+                    email_from=email_data['data']['from'],
+                    email_to=email_data['data']['to'],
+                    filename=attachment['filename'],
+                    content_type=content_type,
+                    file_size=attachment_detail['size'],
+                    created_at=email_data['data']['created_at'],
+                    s3_region=s3_region,
+                    s3_bucket=bucket_name,
+                    s3_key=s3_key,
+                )
+            )
+
+            redis_client.hset(ck_file_digest, file_name, file_digest)
+
+        sql_session.commit()
+
+    # Release the message lock
+    redis_client.delete(ck_message_lock)
+
+    return {'ok': True, 'msg': 'Attachments saved to S3'}
+
+
+@celery_app.task
 def handle_resend_email_received(
     email_data: dict[str, Any], message_lock_ck: str
 ) -> HandleResendEmailReceivedResult:
     """Handle Resend email received event."""
-    save_to_s3 = settings.resend_attachments_s3_access_key_id is not None
     email_id = email_data['data']['email_id']
     logger.debug(f'Processing email [{email_id}]: {email_data}')
 
-    # Save attachment to S3
-    s3_client: S3Client | None = None
-    bucket_name = settings.resend_attachments_s3_bucket
-    if save_to_s3:
-        boto3_session = boto3.Session(
-            aws_access_key_id=settings.resend_attachments_s3_access_key_id,
-            aws_secret_access_key=settings.resend_attachments_s3_access_secret.get_secret_value(),
-            region_name=settings.resend_attachments_s3_region,
-        )
-        if settings.resend_attachments_s3_endpoint_url:
-            s3_client = boto3_session.client(
-                's3',
-                endpoint_url=settings.resend_attachments_s3_endpoint_url.encoded_string(),
-                config=S3Config(
-                    signature_version=settings.resend_attachments_s3_signature_version,
-                    s3={'addressing_style': settings.resend_attachments_s3_addressing_style},  # pyright: ignore[reportArgumentType]
-                    connect_timeout=settings.resend_attachments_s3_conn_timeout,
-                ),
-            )
-        else:
-            s3_client = boto3_session.client(
-                's3',
-                region_name=settings.resend_attachments_s3_region,
-                config=S3Config(
-                    connect_timeout=settings.resend_attachments_s3_conn_timeout,
-                ),
-            )
-
     attachment_list = email_data['data']['attachments']
-    ai_file_ids: dict[str, str | None] = {}
     download_timeout_config = httpx.Timeout(settings.resend_webhook_attachments_download_timeout)
+    ai_file_ids: dict[str, str | None] = {}
     ck_file_digest = f'{settings.cache_prefix}:file_digest'
     ck_ai_files = f'{settings.cache_prefix}:ai:files'
     with (
@@ -138,44 +213,13 @@ def handle_resend_email_received(
             file_ext = content_type.split('/')[-1]
             file_name = f'resend_{email_id}_{attachment_id}.{file_ext}'
 
-            # Save attachment to S3
-            if s3_client:
-                attachment_detail = resend.Emails.Receiving.Attachments.get(email_id, attachment_id)
-                attachment_response = http_client.get(attachment_detail['download_url'])
+            # Fetch attachments from Resend
+            attachment_detail = resend.Emails.Receiving.Attachments.get(email_id, attachment_id)
+            attachment_response = http_client.get(attachment_detail['download_url'])
 
-                # Calculate the SHA-256 hash of the attachment
-                sha256_hash = sha256(attachment_response.content)
-                file_digest = sha256_hash.hexdigest()
-
-                bucket_key = '/'.join([settings.resend_attachments_s3_prefix, file_name])
-                s3_client.upload_fileobj(
-                    BytesIO(attachment_response.content),
-                    bucket_name,
-                    bucket_key,
-                    Config=S3TransferConfig(
-                        multipart_threshold=settings.resend_attachments_s3_multipart_threshold
-                    ),
-                )
-
-                sql_session.add(
-                    EmailAttachment(
-                        webhook=EmailWebhookEnum.RESEND,
-                        webhook_event_type=EmailWebhookEventTypeEnum.EMAIL_RECEIVED,
-                        message_id=email_data['data']['message_id'],
-                        email_id=email_id,
-                        attachment_id=attachment_id,
-                        email_subject=email_data['data']['subject'],
-                        email_from=email_data['data']['from'],
-                        email_to=email_data['data']['to'],
-                        filename=attachment['filename'],
-                        content_type=content_type,
-                        file_size=attachment_detail['size'],
-                        created_at=email_data['data']['created_at'],
-                        s3_region=settings.resend_attachments_s3_region,
-                        s3_bucket=bucket_name,
-                        s3_key=bucket_key,
-                    )
-                )
+            # Calculate the SHA-256 hash of the attachment
+            sha256_hash = sha256(attachment_response.content)
+            file_digest = sha256_hash.hexdigest()
 
             # Upload attachments to AI
             ai_file_id = redis_client.hget(ck_ai_files, file_name)
@@ -207,7 +251,6 @@ def handle_resend_email_received(
                     )
                     ai_file_id = ai_fileobj.id
                     redis_client.hset(ck_ai_files, file_name, ai_file_id)
-            redis_client.hset(ck_file_digest, file_name, file_digest)
 
             ai_file_ids[file_name] = ai_file_id
 
@@ -217,6 +260,5 @@ def handle_resend_email_received(
     redis_client.delete(message_lock_ck)
 
     return {
-        'save_to_s3': save_to_s3,
         'ai_file_ids': ai_file_ids,
     }
