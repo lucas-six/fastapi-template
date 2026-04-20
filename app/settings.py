@@ -51,17 +51,19 @@ class Settings(BaseSettings):
     resend_webhook_queue_maxlen: int | None = 100  # Redis Streams max length
     resend_webhook_lock_expire: int = 10  # Webhook lock expire time
     resend_webhook_attachments_download_timeout: float = 10.0
-    resend_attachments_s3_access_key_id: str | None = None
-    resend_attachments_s3_access_secret: SecretStr = SecretStr('')
-    resend_attachments_s3_region: str = ''
-    resend_attachments_s3_endpoint_url: HttpUrl | None = None  # Aliyun OSS
-    resend_attachments_s3_conn_timeout: float = 4.5
-    resend_attachments_s3_signature_version: str = 's3'
-    resend_attachments_s3_addressing_style: str = 'virtual'
-    resend_attachments_s3_bucket: str = 'resend-attachments'
-    resend_attachments_s3_prefix: str = ''
-    resend_attachments_s3_presigned_expire: int = 3600
-    resend_attachments_s3_multipart_threshold: int = 1024**3
+
+    # S3
+    s3_access_key_id: str | None = None
+    s3_access_secret: SecretStr = SecretStr('')
+    s3_region: str = ''
+    s3_endpoint_url: HttpUrl | None = None  # Aliyun OSS
+    s3_conn_timeout: float = 4.5
+    s3_signature_version: str = 's3'
+    s3_addressing_style: str = 'virtual'
+    s3_bucket: str = 'resend_attachments'
+    s3_key_prefix: str = ''
+    s3_multipart_threshold: int = 1024**3
+    s3_presigned_expire: int = 3600
 
     # AI API
     ai_api_key: SecretStr = SecretStr('')
