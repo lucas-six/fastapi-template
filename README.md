@@ -7,7 +7,7 @@ GitHub Actions, S3 compatible storage, AI APIs and more.
 ## Features
 
 - Virtual Environment support: `uv`
-- SQL Database support: `PostgreSQL`
+- Database support: `PostgreSQL`
 - Caching support: `Redis`
 - Task Queue support: `Celery`
 - Message Queue support: `RabbitMQ`
@@ -42,12 +42,11 @@ APP_ROOT_URL=/api
 APP_DESCRIPTION="FastAPI App description."
 DEBUG=true
 
-# SQL Database (PostgreSQL)
-SQL_DB_ENABLED=true
-SQL_DB_URL=postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-SQL_DB_CONNECT_TIMEOUT=5.0
-SQL_DB_POOL_SIZE=10
-SQL_DB_POOL_TIMEOUT=5.0
+# Database (PostgreSQL)
+DB_URL=postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+DB_CONNECT_TIMEOUT=5.0
+DB_POOL_SIZE=10
+DB_POOL_TIMEOUT=5.0
 
 # Cache (Redis)
 REDIS_URL=redis://:foobared@localhost:6379/0
