@@ -57,7 +57,7 @@ urls = { Repository = "https://github.com/lucas-six/fastapi-template/" }
 dev = ["mypy>=1.18.2", "ruff>=0.14.6"]
 
 [tool.setuptools]
-py-modules = ["app"]
+py-modules = ["app", "task"]
 
 # [[tool.uv.index]]
 # url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
@@ -170,19 +170,19 @@ module = "redis.*"
 ignore_missing_imports = true
 
 [tool.pyright]
-include = ["app/**/*.py"]
-exclude = [
-    ".git",
-    "**/__pycache__",
-    ".venv",
-    "**/*.egg-info",
-    ".ruff_cache",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".tox",
-    "alembic/env.py",
-    "alembic/versions/*",
-]
+include = ["app", "task"]
+# exclude = [
+#     ".git",
+#     "**/__pycache__",
+#     ".venv",
+#     "**/*.egg-info",
+#     ".ruff_cache",
+#     ".mypy_cache",
+#     ".pytest_cache",
+#     ".tox",
+#     "alembic/env.py",
+#     "alembic/versions/*",
+# ]
 reportGeneralTypeIssues = "none"
 reportUnboundVariable = "none"
 reportFunctionMemberAccess = "none"
