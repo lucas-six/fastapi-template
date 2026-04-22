@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Any
 
 from pydantic import EmailStr, StrictBool, field_serializer, field_validator
-from sqlmodel import JSON, Column, Field, SQLModel
+from sqlmodel import JSON, Column, Field, SQLModel, UniqueConstraint
 
 from app.settings import get_settings
 
@@ -78,8 +78,14 @@ class EmailAttachment(SQLModel, table=True):
     s3_bucket: str = Field(max_length=64)
     s3_key: str = Field(max_length=256)
 
-    class Config:  # pyright: ignore[reportIncompatibleVariableOverride]
-        unique_together = [('webhook', 'email_id', 'attachment_id')]
+    __table_args__ = (
+        UniqueConstraint(
+            'webhook',
+            'email_id',
+            'attachment_id',
+            name='uq_email_attachment_webhook_email_id_attachment_id',
+        ),
+    )
 
     @field_serializer('created_at')
     def serialize_created_at(self, value: datetime) -> str:
